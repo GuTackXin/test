@@ -1,6 +1,6 @@
 on:
   workflow_dispatch:
-  inputs:
+    inputs:
       repo_name:
         description: 'repo name'
         required: true
