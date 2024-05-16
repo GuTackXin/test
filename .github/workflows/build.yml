@@ -1,0 +1,91 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+      description: 'repo name'
+        required: true
+        type: choice
+        options:
+        - 'openwrt'
+        - 'immortalwrt'
+        - 'lede'
+      repo_branch:
+        description: 'repo branch'
+        required: true
+        type: choice
+        options:
+        - 'snapshot'
+        - 'latest_stable_release'
+      target:
+        description: 'target'
+        required: true
+        type: string
+      subtarget:
+        description: 'subtarget'
+        required: true
+        type: string
+      profile:
+        description: 'profile'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build Firmware
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Build System Setup
+        run: |
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+
+      - name: clone source code
+        run: |
+          if [ "${{ inputs.repo_name }}" == 'openwrt' ]; then
+              repo_url="https://github.com/openwrt/openwrt.git"
+          elif [ "${{ inputs.repo_name }}" == 'immortalwrt' ]; then
+              repo_url="https://github.com/immortalwrt/immortalwrt.git"
+          elif [ "${{ inputs.repo_name }}" == 'lede' ]; then
+              repo_url="https://github.com/coolsnowwolf/lede.git"
+		      fi
+          git clone ${repo_url} ${{ inputs.repo_name }}
+
+      - name: checkout latest stable release source code
+        if: "${{ inputs.repo_branch }}" == 'latest_stable_release'
+        working-directory: ${{ inputs.repo_name }}
+        run: |
+          git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
+
+      - name: Update and Install feeds
+        working-directory: ${{ inputs.repo_name }}
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Using official build config
+        working-directory: ${{ inputs.repo_name }}
+        run: |
+          cat >> .config <<EOF
+          CONFIG_TARGET_${{ inputs.target }}=y
+          CONFIG_TARGET_${{ inputs.target }}_${{ inputs.subtarget }}=y
+          CONFIG_TARGET_${{ inputs.target }}_${{ inputs.subtarget }}_DEVICE_${{ inputs.profile }}=y
+          EOF
+          make defconfig
+
+      - name: Download sources
+        working-directory: ${{ inputs.repo_name }}
+        run: |
+          make download -j$(($(nproc) + 1))
+
+      - name: build the image
+        working-directory: ${{ inputs.repo_name }}
+        run: |
+          make world -j$(($(nproc) + 1)) || make world -j1 V=s
+
+      - name: upload firmware
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.repo_name }}
+          path: ${{ inputs.repo_name }}/bin/targets/
