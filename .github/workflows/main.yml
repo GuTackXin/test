@@ -51,7 +51,7 @@ jobs:
           git clone ${repo_url} ${{ inputs.repo_name }}
 
       - name: checkout latest stable release source code
-        if: "${{ inputs.repo_branch }}" == 'latest_stable_release'
+        if: ${{ inputs.repo_branch }} == 'latest_stable_release'
         working-directory: ${{ inputs.repo_name }}
         run: |
           git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
