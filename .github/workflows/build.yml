@@ -49,7 +49,7 @@ jobs:
               repo_url="https://github.com/immortalwrt/immortalwrt.git"
           elif [ "${{ inputs.repo_name }}" == 'lede' ]; then
               repo_url="https://github.com/coolsnowwolf/lede.git"
-		      fi
+          fi
           git clone ${repo_url} ${{ inputs.repo_name }}
 
       - name: checkout latest stable release source code
