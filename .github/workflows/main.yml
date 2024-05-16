@@ -2,9 +2,9 @@ name: Build
 
 on:
   workflow_dispatch:
-    inputs:
+    inputs
       repo_name:
-      description: 'repo name'
+        description: 'repo name'
         required: true
         type: choice
         options:
